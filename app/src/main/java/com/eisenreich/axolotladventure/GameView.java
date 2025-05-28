@@ -1,5 +1,6 @@
 package com.eisenreich.axolotladventure;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -8,87 +9,108 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Handler;
 import android.view.MotionEvent;
-import android.view.View;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
-public class GameView extends View {
-    private int level, lives = 3, collectibles = 0;
-    private float playerX = 100, playerY = 500, velocityY = 0;
-    private Paint paint = new Paint();
-    private Handler handler = new Handler();
+public class GameView extends SurfaceView implements Runnable {
+    private Thread thread;
+    private boolean isPlaying;
+    private SurfaceHolder holder;
+    private Paint paint;
+    private Player player;
+    private int lives = 3;
     private long startTime;
+    private Level level;
+    private int levelNumber;
+    private Context context;
 
-    private final Runnable GAME_LOOP = new Runnable() {
-        @Override
-        public void run() {
-            update();
-            invalidate();
-            handler.postDelayed(this, 16);
-        }
-    };
-    public GameView(Context context, int level) {
+    public GameView(Context context, int levelNumber) {
         super(context);
-        this.level = level;
-        setBackgroundColor(Color.rgb(240, 248, 255));
+        this.context = context;
+        this.levelNumber = levelNumber;
+
+        holder = getHolder();
+        paint = new Paint();
+
+        level = LevelData.getLevel(levelNumber);
+        player = new Player(level.startX, level.startY);
         startTime = System.currentTimeMillis();
-        handler.post(GAME_LOOP);
     }
-    private void update() {
-        velocityY += 2;
-        playerY += velocityY;
 
-        // ground collision
-        if (playerY >= 800) {
-            playerY = 800;
-            velocityY = 0;
-        }
-        // fake finish line
-        if (playerX > 1800 && playerY >= 750) {
-            long time = System.currentTimeMillis() - startTime;
-            saveProgress(time, collectibles);
-            getContext().startActivity(new Intent(getContext(), MainActivity.class));
-        }
-    }
     @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+    public void run() {
+        while (isPlaying) {
+            if (!holder.getSurface().isValid()) continue;
+            update();
+            draw();
+        }
+    }
 
-        // ground
-        paint.setColor(Color.GREEN);
-        canvas.drawRect(0, 850, 2000, 1000, paint);
-        // player
-        paint.setColor(Color.MAGENTA);
-        canvas.drawCircle(playerX, playerY, 50, paint);
-        // finish
-        paint.setColor(Color.YELLOW);
-        canvas.drawRect(1850, 750, 1900, 850, paint);
-        // UI
+    private void update() {
+        player.update();
+
+        // Collision with obstacles
+        for (Obstacle obstacle : level.obstacles) {
+            if (player.collidesWith(obstacle)) {
+                lives--;
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    player.respawn(level.startX, level.startY);
+                }
+                return;
+            }
+        }
+        // Collect collectables
+        for (Collectable c : level.collectables) {
+            if (!c.collected && player.collidesWith(c)) {
+                c.collected = true;
+                player.collected++;
+            }
+        }
+        // Reached goal
+        if (player.collidesWith(level.goal)) {
+            finishLevel();
+        }
+    }
+
+    private void draw() {
+        Canvas canvas = holder.lockCanvas();
+        canvas.drawColor(Color.WHITE);
+        level.draw(canvas, paint);
+        player.draw(canvas, paint);
         paint.setColor(Color.BLACK);
         paint.setTextSize(40);
-        canvas.drawText("Lives: " + lives, 1600, 100, paint);
-        canvas.drawText("Level " + level, 1600, 150, paint);
-        canvas.drawText("Collectibles " + collectibles, 1600, 200, paint);
+        canvas.drawText("Lives: " + lives, 20, 50, paint);
+        canvas.drawText("Collected: " + player.collected, 20, 100, paint);
+        canvas.drawText("Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s", 20, 150, paint);
+        holder.unlockCanvasAndPost(canvas);
     }
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN && playerY >= 800) {
-            velocityY = -40; // jump
-        }
-        playerX += 40;
-        return true;
+
+    private void gameOver() {
+        isPlaying = false;
+        // Handle game over logic
+        ((Activity) context).runOnUiThread(() -> ((Activity) context).finish());
     }
-    private void saveProgress(long time, int collected) {
-        SharedPreferences prefs = getContext().getSharedPreferences("GameData", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("level" + level + "_completed", true);
-        editor.putInt("current_level", Math.min(level + 1, 3));
-        long bestTime = prefs.getLong("level" + level + "_time", Long.MAX_VALUE);
-        if (time < bestTime) {
-            editor.putLong("level" + level + "_time", time);
+
+    private void finishLevel() {
+        isPlaying = false;
+        // Save progress logic here
+        ((Activity) context).runOnUiThread(() -> ((Activity) context).finish());
+    }
+
+    public void resume() {
+        isPlaying = true;
+        thread = new Thread(this);
+        thread.start();
+    }
+
+    public void pause() {
+        try {
+            isPlaying = false;
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        int bestCollect = prefs.getInt("level" + level + "_collectibles", 0);
-        if (collected > bestCollect) {
-            editor.putInt("level" + level + "_collectibles", collected);
-        }
-        editor.apply();
     }
 }

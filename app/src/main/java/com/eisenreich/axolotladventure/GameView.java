@@ -23,6 +23,8 @@ public class GameView extends SurfaceView implements Runnable {
     private Level level;
     private int levelNumber;
     private Context context;
+    private boolean movingLeft = false;
+    private boolean movingRight = false;
 
     public GameView(Context context, int levelNumber) {
         super(context);
@@ -47,8 +49,14 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     private void update() {
-        player.update();
+        //player.update();
 
+        if (movingLeft) {
+            player.moveLeft();
+        }
+        if (movingRight) {
+            player.moveRight();
+        }
         // Collision with obstacles
         for (Obstacle obstacle : level.obstacles) {
             if (player.collidesWith(obstacle)) {

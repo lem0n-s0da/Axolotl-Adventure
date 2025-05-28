@@ -59,6 +59,7 @@ public class Player {
     }
 
     public boolean collidesWith(GameObject obj) {
+        if (obj == null) return false;
         return RectF.intersects(getBounds(), obj.getBounds());
     }
 

@@ -27,7 +27,7 @@
 
             <Button
                 android:id="@+id/button_left"
-                android:text="<"
+                android:text="L"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_width="72dp"
@@ -37,7 +37,7 @@
 
             <Button
                 android:id="@+id/button_right"
-                android:text=">"
+                android:text="R"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:layout_width="72dp"
@@ -48,7 +48,7 @@
 
         <Button
             android:id="@+id/button_jump"
-            android:text="^"
+            android:text="U"
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_width="72dp"

@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Handler;
+import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -25,6 +26,15 @@ public class GameView extends SurfaceView implements Runnable {
 
     public GameView(Context context) {
         super(context);
+        init(context);
+    }
+
+    public GameView(Context context, AttributeSet attributeSet) {
+        super(context, attributeSet);
+        init(context);
+    }
+
+    private void init(Context context) {
         player = new Player(100, 100, 50, 50);
         level = new Level(100, 700); // Assume Level class initializes platforms, collectables, and goal
         paint = new Paint();
@@ -53,6 +63,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         // Check collisions with platforms
         for (Platform platform : level.getPlatforms()) {
+            if (platform == null) continue;
             if (player.collidesWith(platform)) {
                 player.handleCollision(platform);
             }
@@ -60,6 +71,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         // Check collisions with collectables
         for (Collectable collectable : level.getCollectables()) {
+            if (collectable == null) continue;
             if (!collectable.isCollected() && player.collidesWith(collectable)) {
                 collectable.collect();
                 score += collectable.getValue();
@@ -142,6 +154,6 @@ public class GameView extends SurfaceView implements Runnable {
         intent.putExtra("score", score);
         intent.putExtra("time", timeTaken);
         intent.putExtra("levelCompleted", levelCompleted);
-        getContext().startActivity(intent);
+        //getContext().startActivity(intent);
     }
 }

@@ -11,16 +11,16 @@ public class LevelData {
 
         switch (number) {
             case 1:
-//                level.obstacles.add(new Obstacle(500, 700, 100, 100));
-//                level.obstacles.add(new Obstacle(900, 700, 100, 100));
+                level.addPlatform(new Platform(50, 700, 100, 100));
+                level.addPlatform(new Platform(900, 700, 100, 100));
                 level.addCollectable(new Collectable(300, 650, 40));
                 level.addCollectable(new Collectable(800, 650, 40));
                 level.setGoal(new Goal(1200, 700, 90, 90));
                 break;
 
             case 2:
-//                level.obstacles.add(new Obstacle(600, 650, 100, 150));
-//                level.obstacles.add(new Obstacle(1000, 600, 100, 200));
+                level.addPlatform(new Platform(600, 650, 100, 150));
+                level.addPlatform(new Platform(1000, 600, 100, 200));
                 level.addCollectable(new Collectable(400, 620, 40));
                 level.addCollectable(new Collectable(950, 580, 40));
                 level.addCollectable(new Collectable(1300, 650, 40));
@@ -28,9 +28,9 @@ public class LevelData {
                 break;
 
             case 3:
-//                level.obstacles.add(new Obstacle(500, 680, 200, 120));
-//                level.obstacles.add(new Obstacle(1100, 700, 100, 100));
-//                level.obstacles.add(new Obstacle(1600, 660, 150, 140));
+                level.addPlatform(new Platform(500, 680, 200, 120));
+                level.addPlatform(new Platform(1100, 700, 100, 100));
+                level.addPlatform(new Platform(1600, 660, 150, 140));
                 level.addCollectable(new Collectable(400, 650, 40));
                 level.addCollectable(new Collectable(1050, 660, 40));
                 level.addCollectable(new Collectable(1400, 690, 40));

@@ -13,112 +13,135 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public class GameView extends SurfaceView implements Runnable {
-    private Thread thread;
+    private Thread gameThread;
     private boolean isPlaying;
-    private SurfaceHolder holder;
-    private Paint paint;
     private Player player;
-    private int lives = 3;
-    private long startTime;
     private Level level;
-    private int levelNumber;
-    private Context context;
+    private Paint paint;
     private boolean movingLeft = false;
     private boolean movingRight = false;
+    private long startTime;
+    private int score = 0;
 
-    public GameView(Context context, int levelNumber) {
+    public GameView(Context context) {
         super(context);
-        this.context = context;
-        this.levelNumber = levelNumber;
-
-        holder = getHolder();
+        player = new Player(100, 100, 50, 50);
+        level = new Level(100, 700); // Assume Level class initializes platforms, collectables, and goal
         paint = new Paint();
-
-        level = LevelData.getLevel(levelNumber);
-        player = new Player(level.startX, level.startY);
         startTime = System.currentTimeMillis();
     }
 
     @Override
     public void run() {
         while (isPlaying) {
-            if (!holder.getSurface().isValid()) continue;
             update();
             draw();
+            control();
         }
     }
 
     private void update() {
-        //player.update();
-
         if (movingLeft) {
             player.moveLeft();
-        }
-        if (movingRight) {
+        } else if (movingRight) {
             player.moveRight();
+        } else {
+            player.stop();
         }
-        // Collision with obstacles
-        for (Obstacle obstacle : level.obstacles) {
-            if (player.collidesWith(obstacle)) {
-                lives--;
-                if (lives <= 0) {
-                    gameOver();
-                } else {
-                    player.respawn(level.startX, level.startY);
-                }
-                return;
+
+        player.update();
+
+        // Check collisions with platforms
+        for (Platform platform : level.getPlatforms()) {
+            if (player.collidesWith(platform)) {
+                player.handleCollision(platform);
             }
         }
-        // Collect collectables
-        for (Collectable c : level.collectables) {
-            if (!c.collected && player.collidesWith(c)) {
-                c.collected = true;
-                player.collected++;
+
+        // Check collisions with collectables
+        for (Collectable collectable : level.getCollectables()) {
+            if (!collectable.isCollected() && player.collidesWith(collectable)) {
+                collectable.collect();
+                score += collectable.getValue();
             }
         }
-        // Reached goal
-        if (player.collidesWith(level.goal)) {
-            finishLevel();
+
+        // Check collision with goal
+        if (player.collidesWith(level.getGoal())) {
+            endGame(true);
+        }
+
+        // Check if player fell off the screen
+        if (player.getY() > getHeight()) {
+            player.loseLife();
+            if (player.isDead()) {
+                endGame(false);
+            } else {
+                player.respawn();
+            }
         }
     }
 
     private void draw() {
-        Canvas canvas = holder.lockCanvas();
-        canvas.drawColor(Color.WHITE);
-        level.draw(canvas, paint);
-        player.draw(canvas, paint);
-        paint.setColor(Color.BLACK);
-        paint.setTextSize(40);
-        canvas.drawText("Lives: " + lives, 20, 50, paint);
-        canvas.drawText("Collected: " + player.collected, 20, 100, paint);
-        canvas.drawText("Time: " + (System.currentTimeMillis() - startTime) / 1000 + "s", 20, 150, paint);
-        holder.unlockCanvasAndPost(canvas);
+        if (getHolder().getSurface().isValid()) {
+            Canvas canvas = getHolder().lockCanvas();
+            canvas.drawColor(Color.CYAN);
+
+            level.draw(canvas, paint);
+            player.draw(canvas);
+
+            // Draw score and lives
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(40);
+            canvas.drawText("Score: " + score, 50, 50, paint);
+            canvas.drawText("Lives: " + player.getLives(), 50, 100, paint);
+
+            getHolder().unlockCanvasAndPost(canvas);
+        }
     }
 
-    private void gameOver() {
-        isPlaying = false;
-        // Handle game over logic
-        ((Activity) context).runOnUiThread(() -> ((Activity) context).finish());
+    private void control() {
+        try {
+            Thread.sleep(17); // Approximately 60fps
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void finishLevel() {
+    public void pause() {
         isPlaying = false;
-        // Save progress logic here
-        ((Activity) context).runOnUiThread(() -> ((Activity) context).finish());
+        try {
+            gameThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void resume() {
         isPlaying = true;
-        thread = new Thread(this);
-        thread.start();
+        gameThread = new Thread(this);
+        gameThread.start();
     }
 
-    public void pause() {
-        try {
-            isPlaying = false;
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public void setMovingLeft(boolean movingLeft) {
+        this.movingLeft = movingLeft;
+    }
+
+    public void setMovingRight(boolean movingRight) {
+        this.movingRight = movingRight;
+    }
+
+    public void jump() {
+        player.jump();
+    }
+
+    private void endGame(boolean levelCompleted) {
+        isPlaying = false;
+        long timeTaken = System.currentTimeMillis() - startTime;
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        intent.putExtra("score", score);
+        intent.putExtra("time", timeTaken);
+        intent.putExtra("levelCompleted", levelCompleted);
+        getContext().startActivity(intent);
     }
 }

@@ -8,13 +8,14 @@ import android.graphics.RectF;
 public class Player {
     private float x, y;
     private float width, height;
-    private float velocityX, velocityY;
-    private boolean onGround;
-    private int lives;
-    private final float gravity = 1.0f;
-    private final float jumpStrength = -20f;
-    private final float moveSpeed = 10f;
-    private final float startX, startY;
+    private float velocityX = 0;
+    private float velocityY = 0;
+    private float gravity = 1.0f;
+    private float jumpStrength = -20f;
+    private float moveSpeed = 10f;
+    private boolean onGround = false;
+    private int lives = 3;
+    private float startX, startY;
     private Paint paint;
 
     public Player(float startX, float startY, float width, float height) {
@@ -24,11 +25,7 @@ public class Player {
         this.y = startY;
         this.width = width;
         this.height = height;
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.onGround = false;
-        this.lives = 3;
-        this.paint = new Paint();
+        paint = new Paint();
         paint.setColor(Color.MAGENTA);
     }
 
@@ -36,13 +33,6 @@ public class Player {
         velocityY += gravity;
         x += velocityX;
         y += velocityY;
-
-        // Floor collision (basic ground clamp)
-        if (y + height > GameView.SCREEN_HEIGHT) {
-            y = GameView.SCREEN_HEIGHT - height;
-            velocityY = 0;
-            onGround = true;
-        }
     }
 
     public void draw(Canvas canvas) {
@@ -69,8 +59,18 @@ public class Player {
     }
 
     public boolean collidesWith(GameObject obj) {
-        //return RectF.intersects(getBounds(), obj.getBounds());
-        return false;
+        return RectF.intersects(getBounds(), obj.getBounds());
+    }
+
+    public void handleCollision(GameObject obj) {
+        RectF playerRect = getBounds();
+        RectF objRect = obj.getBounds();
+
+        if (playerRect.bottom > objRect.top && velocityY > 0) {
+            y = objRect.top - height;
+            velocityY = 0;
+            onGround = true;
+        }
     }
 
     public void respawn() {
@@ -82,7 +82,6 @@ public class Player {
 
     public void loseLife() {
         lives--;
-        respawn();
     }
 
     public boolean isDead() {
@@ -93,15 +92,11 @@ public class Player {
         return new RectF(x, y, x + width, y + height);
     }
 
-    public int getLives() {
-        return lives;
-    }
-
-    public float getX() {
-        return x;
-    }
-
     public float getY() {
         return y;
+    }
+
+    public int getLives() {
+        return lives;
     }
 }
